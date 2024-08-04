@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: "5.9.3" # Versão do WordPress
+name: wordpress
+version: 0.1.0
+description: A Helm chart for Kubernetes
+keywords:
+  - wordpress
+  - app
+  - language
+maintainers:
+  - name: Guilherme Silva
+    email: Guilherme.tr.silva@gmail.com
+kubeVersion: ">=v1.15.0-gke.24"

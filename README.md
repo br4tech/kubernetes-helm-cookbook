@@ -46,21 +46,45 @@ Cada receita (chart) segue uma estrutura organizada e bem documentada:
 
 1. Adicione o repositório:
 
-```bash
-  helm repo add meu-repositorio https://github.com/br4tech/kubernetes-helm-cookbook
-```
+  ```bash
+    helm repo add meu-repositorio https://github.com/br4tech/kubernetes-helm-cookbook
+  ```
 
 2. Atualize o repositório:
 
-```bash
-  helm repo update
-```
+  ```bash
+    helm repo update
+  ```
 
 3. Instale um chart:
 
-```bash
-  helm install minha-aplicacao meu-repositorio/minha-receita
-```
+  ```bash
+    helm install minha-aplicacao meu-repositorio/minha-receita
+  ```
+
+4. Para atualizar as receitas:
+
+  ```bash
+  helm upgrade --namespace=meu-namespace -i nome-do-meu-app
+  ```
+
+### Uteis
+
+Podemos utilizar algumas flags do helm para auxiliar em nosso desemvolvimento sem aplicalos no cluster diretamente.
+
+1. flag dry-run : Esta flag faz com que o Helm simule a atualização ou instalação sem realmente aplicar as mudanças no cluster Kubernetes. É útil para verificar se a configuração está correta e se haverá algum problema antes de fazer a implantação real.
+
+Install 
+
+  ```bash
+    helm install dry-run --namespace=meu-namespace -i nome-do-meu-app
+  ```
+   
+Update
+    
+  ```bash
+    helm update dry-run --namespace=meu-namespace -i nome-do-meu-app
+  ```
 
 ## 🤝 Contribuindo
 Sinta-se à vontade para contribuir com novas receitas, melhorias ou correções! Basta abrir uma issue ou pull request.
