@@ -38,7 +38,7 @@ Cada receita (chart) segue uma estrutura organizada e bem documentada:
 
 | Receita              | Descrição                                                                 | Versão |
 |----------------------|---------------------------------------------------------------------------|--------|
-| wordpress ⌛         | Implanta um site WordPress completo com banco de dados MySQL e servidor web Nginx. | 5.3.2  |
+| wordpress ⌛         | Implanta um site WordPress                                                | 5.9.3  |
 
 
 
@@ -59,7 +59,7 @@ Cada receita (chart) segue uma estrutura organizada e bem documentada:
 3. Instale um chart:
 
   ```bash
-    helm install minha-aplicacao meu-repositorio/minha-receita
+    helm install minha-aplicacao github.com/br4tech/kubernetes-helm-cookbook/wordpress
   ```
 
 4. Para atualizar as receitas:
