@@ -1,0 +1,53 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wordpress.fullname" . }}
+  labels:
+    {{- include "wordpress.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+    replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "wordpress.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wordpress.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path:  {{ .Values.service.healthcheck }}
+              port: http
+            initialDelaySeconds: {{ .Values.service.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.service.timeoutSeconds }}
+            periodSeconds: {{ .Values.service.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path:  {{ .Values.service.healthcheck }}
+              port: http
+            initialDelaySeconds: {{ .Values.service.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.service.timeoutSeconds }}
+            periodSeconds: {{ .Values.service.periodSeconds }}
+          volumeMounts:
+            - name: wordpress-persistent-storage
+              mountPath: /var/www/html
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.configMap.name }}
+            - secretRef:
+                name: {{ .Values.secret.name }}
+      volumes:
+        - name: wordpress-persistent-storage
+          persistentVolumeClaim:
+            claimName: {{ include "wordpress.fullname" . }}

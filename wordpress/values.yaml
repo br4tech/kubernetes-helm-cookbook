@@ -1,0 +1,61 @@
+replicaCount: 2
+
+strategy:
+  maxSurge: 50%
+  maxUnavailable: 50%
+  type: RollingUpdate
+
+podAntiAffinity: "hard" 
+
+budget:
+  minAvailable: 1
+
+configmap:
+  values:
+    WORDPRESS_DB_HOST: worpress
+    WORDPRESS_DB_USER: worpress           
+    WORDPRESS_DB_NAME: wordpress
+  
+secret:
+  values:
+    WORDPRESS_DB_PASSWORD: worpress
+        
+image:
+  repository: wordpress
+  pullPolicy: IfNotPresent
+  tag: "5.9.3"
+
+nameOverride: "wordpress-app"
+fullnameOverride: "wordpress-app-5.9.3" 
+
+serviceAccount:
+  create: true
+  name: worpress
+
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  runAsUser: 1001
+  runAsGroup: 1001
+
+service:
+  type: ClusterIP
+  port: 80
+  healthcheck: "/wp-admin/install.php"
+  initialDelaySeconds: 15
+  timeoutSeconds: 1
+  periodSeconds: 15
+
+persistence:
+  enabled: true
+  storageClassName: default # Nome da StorageClass do seu cluster
+  accessModes:
+    - ReadWriteOnce
+  size: 8Gi
