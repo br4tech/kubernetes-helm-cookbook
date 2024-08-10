@@ -1,25 +1,65 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "wordpress.fullname" . }}
   labels:
-    {{- include "wordpress.labels" . | nindent 4 }}
+{{ include "wordpress.labels" . | indent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-    replicas: {{ .Values.replicaCount }}
-  {{- end }}
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  strategy:
+    type: {{ .Values.strategy.type }}
+    rollingUpdate:
+      maxSurge: {{ .Values.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.strategy.maxUnavailable }}
   selector:
     matchLabels:
-      {{- include "wordpress.labels" . | nindent 6 }}
+      app.kubernetes.io/name: {{ include "wordpress.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        {{- include "wordpress.labels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ include "wordpress.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- if eq .Values.podAntiAffinity "hard" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: {{ template "wordpress.name" . }}
+                  release: {{ .Release.Name }}
+    {{- else if eq .Values.podAntiAffinity "soft" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: {{ template "wordpress.name" . }}
+                    release: {{ .Release.Name }}
+    {{- end }}
+      serviceAccountName: {{ template "wordpress.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.image.tag }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- else }}
+          image: {{ .Values.image.repository }}@{{ .Values.image.digest}}
+          {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
@@ -39,15 +79,22 @@ spec:
             initialDelaySeconds: {{ .Values.service.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.service.timeoutSeconds }}
             periodSeconds: {{ .Values.service.periodSeconds }}
-          volumeMounts:
-            - name: wordpress-persistent-storage
-              mountPath: /var/www/html
           envFrom:
             - configMapRef:
-                name: {{ .Values.configMap.name }}
+                name: {{ .Release.Name }}
             - secretRef:
-                name: {{ .Values.secret.name }}
-      volumes:
-        - name: wordpress-persistent-storage
-          persistentVolumeClaim:
-            claimName: {{ include "wordpress.fullname" . }}
+                name: {{ .Release.Name }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
