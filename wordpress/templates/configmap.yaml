@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.configmap.name }}
+  name: {{  .Release.Name }}
   labels:
 {{ include "wordpress.labels" . | indent 4 }}
   selector:
     app.kubernetes.io/name: {{ include "wordpress.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 data:
-{{- range $key, $value := .Values.configmap }}
+{{- range $key, $value := .Values.configmap.values }}
   {{ $key }}: {{ $value | quote }}
 {{- end -}}

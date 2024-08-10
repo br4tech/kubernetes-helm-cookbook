@@ -21,10 +21,11 @@ secret:
     WORDPRESS_DB_PASSWORD: worpress
         
 image:
-  repository: wordpress
+  repository: wordpress 
   pullPolicy: IfNotPresent
   tag: "5.9.3"
 
+imagePullSecrets: []
 nameOverride: "wordpress-app"
 fullnameOverride: "wordpress-app-5.9.3" 
 
@@ -52,3 +53,19 @@ service:
   initialDelaySeconds: 15
   timeoutSeconds: 1
   periodSeconds: 15
+
+autoscaling:
+    enabled: true
+    annotations:
+        autoscaling.alpha.kubernetes.io/metrics: '[{"type":"Resource","resource":{"name":"memory","targetAverageUtilization":85}}]'
+    maxReplicas: 2
+    minReplicas: 1
+    CPUUtilization: 80
+
+resources:
+    limits:
+        cpu: 200m
+        memory: 1Gi
+    requests:
+        cpu: 200m
+        memory: 1Gi
