@@ -86,5 +86,11 @@ Update
     helm update dry-run --namespace=meu-namespace -i nome-do-meu-app
   ```
 
+## Recursos adicionais
+
+- [Instalar k8s local com Minikube](https://github.com/br4tech/k8s-local-setup)
+
+
+
 ## 🤝 Contribuindo
 Sinta-se à vontade para contribuir com novas receitas, melhorias ou correções! Basta abrir uma issue ou pull request.

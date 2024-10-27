@@ -1,0 +1,194 @@
+# Quantidade minima de pods, caso não use o HPA.
+replicaCount: 2
+
+# Estratégia de update.
+strategy:
+  maxSurge: 50%
+  maxUnavailable: 50%
+  type: RollingUpdate
+
+# Define se vai aceitar pods do mesmo deploy no mesmo node.
+# Parâmetros:
+# Hard - Não aceita no mesmo node.
+# Soft - aceita no mesmo node.
+podAntiAffinity: "hard"
+
+# Define a quantidade mínima indisponível do pod.
+budget:
+  minAvailable: 1
+# Cria um configmap com as informações contidas aqui.
+configmap:
+  name: valor
+
+# Cria uma secret com as informações contidas aqui.
+secret:
+  chave: valor
+
+# Define o registry, imagem tag e pull policy.
+image:
+  repository: registry
+  tag: 0.0.1
+  pullPolicy: IfNotPresent
+
+# Define uma secret para fazer o pull da imagem em um registry diferente.
+imagePullSecrets: []
+
+# Define o primeiro nome para o deploy podendo ser diferente do nome do chart.
+nameOverride: "chartName"
+# Define o nome completo para o deploy podendo ser diferente do nome do chart.
+fullnameOverride: ""
+
+# Cria uma conta de serviço para o Deploy.
+serviceAccount:
+  create: true
+  name: chartName
+
+# Define id para o file system do pod, este valor deve estar acima do id 1001.
+podSecurityContext:
+  fsGroup: 2000
+
+# Define algumas politicas de segurança para o container.
+securityContext:
+#  Remove todas as capacidades de elevação de privilégios na selinux.
+  capabilities:
+    drop:
+      - ALL
+#  Não permite escrita e disco.
+  readOnlyRootFilesystem: true
+#  Não executa o container com usuário ROOT.
+  runAsNonRoot: true
+#  Remove escalação de privilégios.
+  allowPrivilegeEscalation: false
+#  Define id de usuário e grupo para o container.
+  runAsUser: 1001
+  runAsGroup: 1001
+
+# Define o Serviço de rede para o pod.
+service:
+  type: ClusterIP
+  port: 5000
+  # Define os health checks.
+  healthcheck: "/"
+  initialDelaySeconds: 15
+  timeoutSeconds: 1
+  periodSeconds: 15
+
+# Ativa a Ingress pelo Nginx Ingress.
+ingress:
+# Ativa a criação do recurso de Ingress.
+  enabled: false
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: letsencrypt
+    cert-manager.io/issue-temporary-certificate: "true"
+    ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: hostname
+      paths: /
+  tls:
+    - secretName: tls-hostname
+      hosts:
+        - hostname
+
+# Ativa a Ingress pelo Istio.
+istio:
+# Ativa a criação do recurso de Ingress.
+  enabled: true
+#  Define o Host do Gateway.
+  hosts:
+    - hostname
+  portHttp:
+    name: http
+    number: 80
+    protocol: HTTP
+  portHttps:
+    name: https
+    number: 443
+    protocol: HTTPS
+#  Ativa o SSL para Gateway.
+  tls:
+    httpsRedirect: true
+    secret: tls-app
+# Ativa a criação do certificado pelo cert-manager
+  certmanager:
+    issuerRef:
+      kind: ClusterIssuer
+      name: letsencrypt
+#   Ativa canary deploy
+  canary:
+    enabled: false
+    host:
+    port: 5000
+    weight: chartName.namespace.svc.cluster.local
+
+# Ativa o auto scale com métricas de 85% de cpu e memória.
+autoscaling:
+  enabled: true
+  annotations:
+    autoscaling.alpha.kubernetes.io/metrics: '[{"type":"Resource","resource":{"name":"memory","targetAverageUtilization":85}}]'
+  maxReplicas: 10
+  minReplicas: 2
+  CPUUtilization: 85
+
+# Define Recursos de CPU e Memória para o pod.
+resources:
+  limits:
+    cpu: 200m
+    memory: 200Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
+
+# Define recurso de volumes para o deploy
+volumes:
+# Ativa disco para aplicação.
+  enabled: false
+  name: nome-do-volume
+  mountPath: /directory
+  accessMode: '- ReadWriteOnce'
+# tamanho do pvc
+  size: 10Gi
+# storageclass a ser utilizada
+  storageClass: standard
+# politica padrão ao deletar o chart de helm  
+  ReclaimPolicy: Delete
+
+# # Define cronjobs.
+# job:
+# # Ativa cronjob para aplicação.
+#   enabled: false
+# # define tempo de execução do job
+#     schedule: '*/5 * * * *'
+# # politica padrão para restart do job    
+#     restartPolicy: OnFailure
+# # historico de jobs que falharam    
+#     failedJobsHistoryLimit: 2
+# # historico de jobs com sucesso
+#     successfulJobsHistoryLimit: 3
+# # politica de concorrencia de jobs    
+#     concurrencyPolicy: Forbid
+# # não injeta o sidecar do istio    
+#     annotations:
+#         sidecar.istio.io/inject: "false"
+#     url: https://hostname
+#     image:
+#         repository: gcr.io/reclame-aqui-209410/curl
+#         tag: latest
+#         pullPolicy: IfNotPresent
+#     resources:
+#         limits:
+#             cpu: 50m
+#             memory: 32Mi
+#         requests:
+#             cpu: 50m
+#             memory: 32Mi
+
+# Define o node Pool.
+nodeSelector: {}
+
+# Define o deploy vai estar elegível ao nodePool especifico.
+tolerations: []
+
+# Define o deploy vai estar elegível ao nodePool especifico.
+affinity: {}

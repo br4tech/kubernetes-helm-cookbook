@@ -1,0 +1,145 @@
+# Indica que estamos usando a versão 1 da API de aplicativos do Kubernetes para definir este recurso.
+apiVersion: apps/v1
+# Especifica que este arquivo YAML descreve um Deployment, que é responsável por gerenciar um conjunto de Pods idênticos.
+kind: Deployment
+metadata:
+  # Define o nome do Deployment
+  name: {{ include "chartName.fullname" . }}
+  # Adiciona rótulos (labels) ao Deployment
+  labels:
+{{ include "chartName.labels" . | indent 4 }}
+spec: #Contém as especificações que definem como o Deployment deve se comportar.
+{{- if not .Values.autoscaling.enabled }}
+  # Define quantas réplicas (cópias) do Pod devem estar em execução. O valor é obtido de replicaCount no arquivo values.yaml.
+  replicas: {{ .Values.replicaCount }} 
+{{- end }}
+  # Esta seção define como o Deployment gerenciará a atualização dos Pods quando houver uma nova versão da imagem do contêiner ou alterações na configuração do Deployment.
+  strategy: # Especifica o tipo de estratégia de atualização a ser usada
+    #   RollingUpdate (Padrão):
+    #     -> Esta é a estratégia de atualização padrão no Kubernetes.
+    #     -> Realiza a atualização de forma gradual, substituindo os Pods antigos por novos em lotes controlados.
+    #     -> Permite minimizar o tempo de inatividade durante a atualização, mantendo parte da aplicação em funcionamento.
+    #     -> Configurável através dos parâmetros maxSurge e maxUnavailable para controlar o ritmo da atualização.
+    #   Recreate:
+    #     -> Esta estratégia exclui todos os Pods antigos antes de criar os novos com a configuração atualizada.
+    #     -> Causa um tempo de inatividade durante a atualização, pois a aplicação fica completamente indisponível até que os novos Pods estejam prontos.
+    #     -> Útil em casos onde a nova versão da aplicação não é compatível com a versão anterior e requer uma reinicialização completa.
+    #   Canary:
+    #     -> Implanta uma nova versão da aplicação em um pequeno subconjunto de Pods (os "canários") para testar em produção com tráfego real.
+    #     -> O tráfego é direcionado para a versão "azul" (produção) enquanto a nova versão "verde" é implantada e testada.
+    #     -> Requer configuração adicional para gerenciar o roteamento de tráfego para os Pods "canários".
+    #   Blue/Green:
+    #     -> Mantém duas versões da aplicação em execução simultaneamente (azul e verde).
+    #     -> Permite avaliar o comportamento da nova versão antes de promovê-la para todos os Pods.
+    #     -> Quando a versão "verde" está pronta, o tráfego é alternado para ela, tornando-a a nova versão de produção.
+    #     -> Permite um rollback rápido em caso de problemas com a nova versão.
+    #   A/B Testing: 
+    #     -> Semelhante ao Canary, mas o tráfego é dividido entre diferentes versões da aplicação com base em critérios específicos (por exemplo, cookies do usuário, geolocalização, etc.).
+    #     -> Permite testar diferentes versões com diferentes segmentos de usuários para avaliar o impacto de cada versão
+    type: {{ .Values.strategy.type }}
+    # Esta seção é relevante apenas se type for definido como RollingUpdate. Ela define os parâmetros para controlar o processo de atualização gradual.
+    rollingUpdate:
+      # Define o número máximo de Pods que podem ser criados além do número desejado de réplicas durante a atualização.
+      # Pode ser um número inteiro ou uma porcentagem (por exemplo, '25%').
+      # Permite aumentar temporariamente o número total de Pods para acelerar o processo de atualização
+      maxSurge: {{ .Values.strategy.maxSurge }}
+      # Define o número máximo de Pods que podem ficar indisponíveis durante a atualização.
+      # Também pode ser um número inteiro ou uma porcentagem.
+      # Garante que um número mínimo de Pods permaneça em execução para atender às solicitações durante a atualização.
+      maxUnavailable: {{ .Values.strategy.maxUnavailable }}
+  selector: # Especifica como o Deployment seleciona os Pods que ele gerencia, usando os mesmos rótulos definidos anteriormente.
+    # Indica que o seletor usará rótulos (labels) para identificar os Pods.
+    # Os Pods que possuem todos os rótulos listados aqui serão considerados parte deste Deployment.
+    matchLabels:
+      # Define um rótulo com a chave app.kubernetes.io/name e o valor obtido da função include "chartName.name" ..
+      # Essa função provavelmente busca o nome do seu chart Helm de outro arquivo (como _helpers.tpl) e o insere aqui.
+      # Este rótulo é útil para identificar o aplicativo ao qual o Pod pertence.
+      app.kubernetes.io/name: {{ include "chartName.name" . }}
+      # Define outro rótulo com a chave app.kubernetes.io/instance e o valor {{ .Release.Name }}.
+      # .Release.Name é uma variável do Helm que contém o nome da sua release (instância) do chart.
+      # Este rótulo permite distinguir diferentes instâncias do mesmo aplicativo.
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "chartName.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      # Esta é a chave que define os segredos de pull de imagem para o Pod.
+      # imagePullSecrets são usados quando sua imagem de contêiner está armazenada em um registro privado que requer autenticação para ser baixada (puxada, ou "pulled").
+      # O valor dessa chave será o conteúdo da variável .Values.imagePullSecrets.
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- if eq .Values.podAntiAffinity "hard" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: {{ template "chartName.name" . }}
+                  release: {{ .Release.Name }}
+    {{- else if eq .Values.podAntiAffinity "soft" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: {{ template "chartName.name" . }}
+                    release: {{ .Release.Name }}
+    {{- end }}
+      serviceAccountName: {{ template "chartName.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.image.tag }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- else }}
+          image: {{ .Values.image.repository }}@{{ .Values.image.digest}}
+          {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path:  {{ .Values.service.healthcheck }}
+              port: http
+            initialDelaySeconds: {{ .Values.service.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.service.timeoutSeconds }}
+            periodSeconds: {{ .Values.service.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path:  {{ .Values.service.healthcheck }}
+              port: http
+            initialDelaySeconds: {{ .Values.service.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.service.timeoutSeconds }}
+            periodSeconds: {{ .Values.service.periodSeconds }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.configMap.name }}
+            - secretRef:
+                name: {{ .Values.secret.name }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

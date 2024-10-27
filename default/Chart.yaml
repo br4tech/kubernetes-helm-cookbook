@@ -1,0 +1,15 @@
+apiVersion: v2    #Versao do helm utilizada v1 para helm2 e v2 para helm3
+appVersion: "1.0" 
+name: chartName
+version: 0.1.0
+description: chartName
+keywords:
+  - chartName
+  - app
+  - language
+sources:
+  - https://github.com/br4tech/kubernetes-helm-cookbook
+maintainers:
+  - name: Guilherme Silva
+    email: Guilherme.tr.silva@gmail.com
+kubeVersion: ">=v1.15.0-gke.24" #Versao minima do kubernetes para o deploy das receitas

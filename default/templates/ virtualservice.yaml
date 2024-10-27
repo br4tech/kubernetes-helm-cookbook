@@ -1,0 +1,27 @@
+{{- if .Values.istio.enabled -}}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ include "chartName.fullname" . }}
+  labels:
+{{ include "chartName.labels" . | indent 4 }}
+spec:
+  gateways:
+  - {{ include "chartName.fullname" . }}
+  hosts: {{- range .Values.istio.hosts }}
+    - {{.}}{{- end }}
+  http:
+  - route:
+    - destination:
+        host: {{ include "chartName.fullname" . }}
+        port:
+          number: {{ .Values.service.port }}
+    {{- if .Values.istio.canary.enabled}}
+      weight: {{ sub 100 .Values.istio.canary.weight }}
+    - destination:
+        host: {{ .Values.istio.canary.host }}
+        port:
+          number: {{ .Values.istio.canary.port }}
+      weight: {{ .Values.istio.canary.weight }}
+    {{- end }}
+{{- end -}}

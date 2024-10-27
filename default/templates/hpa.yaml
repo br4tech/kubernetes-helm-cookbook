@@ -1,0 +1,20 @@
+{{- if .Values.autoscaling.enabled -}}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "chartName.fullname" . }}
+  labels:
+{{ include "chartName.labels" . | indent 4 }}
+  {{- with .Values.autoscaling.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: {{ include "chartName.fullname" . }}
+  targetCPUUtilizationPercentage: {{ .Values.autoscaling.CPUUtilization }}
+{{- end }}

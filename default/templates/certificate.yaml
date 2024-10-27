@@ -1,0 +1,17 @@
+{{- if .Values.istio.enabled -}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.istio.tls.secret }}
+  labels:
+{{ include "chartName.labels" . | indent 4 }}
+  namespace: istio-system
+spec:
+  dnsNames: {{- range .Values.istio.hosts }}
+  - {{.}}{{- end }}
+  secretName: {{ .Values.istio.tls.secret }}
+  {{- if .Values.istio.certmanager.issuerRef }}
+  issuerRef:
+{{ toYaml .Values.istio.certmanager.issuerRef | indent 4 }}
+  {{- end -}}
+{{- end -}}

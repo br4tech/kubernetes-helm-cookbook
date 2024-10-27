@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "chartName.fullname" . }}
+  labels:
+{{ include "chartName.labels" . | indent 4 }}
+rules:
+  - apiGroups:      ['{{ template "podSecurityPolicy.apiGroup" . }}']
+    resources:      ['podsecuritypolicies']
+    verbs:          ['use']
+    resourceNames:  [ {{ include "chartName.fullname" . }}]
